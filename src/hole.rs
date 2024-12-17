@@ -1,5 +1,8 @@
-use std::{mem, ptr};
-use std::mem::ManuallyDrop;
+#[cfg(not(feature = "std"))]
+use core::{mem, mem::ManuallyDrop, ptr};
+
+#[cfg(feature = "std")]
+use std::{mem, mem::ManuallyDrop, ptr};
 
 use super::index::*;
 
@@ -22,7 +25,11 @@ impl<'a, T> Hole<'a, T> {
     pub unsafe fn new(data: &'a mut [T], pos: usize) -> Self {
         debug_assert!(pos < data.len());
         let elt = ptr::read(data.get_unchecked(pos));
-        Hole { data, elt: ManuallyDrop::new(elt), pos }
+        Hole {
+            data,
+            elt: ManuallyDrop::new(elt),
+            pos,
+        }
     }
 
     #[inline]
@@ -62,15 +69,14 @@ impl<'a, T> Hole<'a, T> {
     }
 
     #[inline]
-    fn best_child_or_grandchild<F>(&mut self, f: F)
-        -> Option<(HoleSwap<'a, '_, T>, Generation)>
+    fn best_child_or_grandchild<F>(&mut self, f: F) -> Option<(HoleSwap<'a, '_, T>, Generation)>
     where
         F: Fn(&T, &T) -> bool,
     {
         let data = &*self.data;
         let here = self.pos();
 
-        let mut best    = None;
+        let mut best = None;
         let mut element = self.element();
 
         {
@@ -101,7 +107,10 @@ impl<'a, T> Hole<'a, T> {
         })
     }
 
-    fn trickle_down_best<F>(&mut self, f: F) where F: Fn(&T, &T) -> bool {
+    fn trickle_down_best<F>(&mut self, f: F)
+    where
+        F: Fn(&T, &T) -> bool,
+    {
         while let Some((best, generation)) = self.best_child_or_grandchild(&f) {
             best.move_to();
             match generation {
@@ -118,7 +127,7 @@ impl<'a, T> Hole<'a, T> {
     }
 }
 
-impl<'a, T: Ord> Hole<'a, T> {
+impl<T: Ord> Hole<'_, T> {
     pub fn bubble_up(&mut self) {
         if self.on_min_level() {
             match self.get_parent() {
@@ -139,7 +148,10 @@ impl<'a, T: Ord> Hole<'a, T> {
         }
     }
 
-    fn bubble_up_grandparent<F>(&mut self, f: F) where F: Fn(&T, &T) -> bool {
+    fn bubble_up_grandparent<F>(&mut self, f: F)
+    where
+        F: Fn(&T, &T) -> bool,
+    {
         while let Some(grandparent) = self.get_grandparent() {
             if f(grandparent.hole_element(), grandparent.other_element()) {
                 grandparent.move_to();
@@ -174,7 +186,7 @@ impl<'a, T: Ord> Hole<'a, T> {
     }
 }
 
-impl<'a, T> Drop for Hole<'a, T> {
+impl<T> Drop for Hole<'_, T> {
     fn drop(&mut self) {
         unsafe {
             // SAFETY: `elt` is being moved into the hole
@@ -236,6 +248,9 @@ impl<'a, 'b, T> HoleSwap<'a, 'b, T> {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[cfg(not(feature = "std"))]
+    use alloc::vec;
 
     #[test]
     fn hole() {

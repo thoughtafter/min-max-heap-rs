@@ -47,7 +47,7 @@ impl<T: Clone + Ord> FakeHeap<T> {
             if let Some(pred) = count.checked_sub(1) {
                 *count = pred;
             } else {
-                self.tree.remove(&elem); 
+                self.tree.remove(&elem);
             }
 
             self.len -= 1;
@@ -63,7 +63,7 @@ impl<T: Clone + Ord> FakeHeap<T> {
             if let Some(pred) = count.checked_sub(1) {
                 *count = pred;
             } else {
-                self.tree.remove(&elem); 
+                self.tree.remove(&elem);
             }
 
             self.len -= 1;

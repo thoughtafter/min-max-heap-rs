@@ -11,10 +11,12 @@ jobs:
       matrix:
         rust:
           - stable
-          - 1.46.0
+          - 1.65
         flags:
           - --lib --tests
           - --lib --tests --features=serde
+          - --lib --tests --no-default-features
+          - --lib --tests --no-default-features --features=serde
         experimental: [false]
         include:
           - rust: nightly
@@ -40,7 +42,7 @@ jobs:
       matrix:
         rust:
           - stable
-          - 1.46.0
+          - 1.65
         flags:
           - ""
           - --features=serde
@@ -69,7 +71,7 @@ jobs:
       matrix:
         rust:
           - stable
-          - 1.46.0
+          - 1.65
         flags:
           - ""
           - --features=serde
