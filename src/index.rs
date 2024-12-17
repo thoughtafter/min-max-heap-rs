@@ -18,16 +18,32 @@ pub trait HeapIndex {
 }
 
 impl HeapIndex for usize {
-    fn parent(self) -> Self { (self - 1) / 2 }
-    fn grandparent(self) -> Self { self.parent().parent() }
+    fn parent(self) -> Self {
+        (self - 1) / 2
+    }
+    fn grandparent(self) -> Self {
+        self.parent().parent()
+    }
 
-    fn child1(self) -> Self { 2 * self + 1 }
-    fn child2(self) -> Self { 2 * self + 2 }
+    fn child1(self) -> Self {
+        2 * self + 1
+    }
+    fn child2(self) -> Self {
+        2 * self + 2
+    }
 
-    fn grandchild1(self) -> Self { self.child1().child1() }
-    fn grandchild2(self) -> Self { self.child1().child2() }
-    fn grandchild3(self) -> Self { self.child2().child1() }
-    fn grandchild4(self) -> Self { self.child2().child2() }
+    fn grandchild1(self) -> Self {
+        self.child1().child1()
+    }
+    fn grandchild2(self) -> Self {
+        self.child1().child2()
+    }
+    fn grandchild3(self) -> Self {
+        self.child2().child1()
+    }
+    fn grandchild4(self) -> Self {
+        self.child2().child2()
+    }
 
     fn has_parent(self) -> bool {
         self > 0
@@ -108,7 +124,7 @@ mod test {
 
     #[test]
     fn t_has_parent() {
-        assert!(! 0.has_parent());
+        assert!(!0.has_parent());
         assert!(1.has_parent());
         assert!(2.has_parent());
         assert!(3.has_parent());
@@ -116,9 +132,9 @@ mod test {
 
     #[test]
     fn t_has_grandparent() {
-        assert!(! 0.has_grandparent());
-        assert!(! 1.has_grandparent());
-        assert!(! 2.has_grandparent());
+        assert!(!0.has_grandparent());
+        assert!(!1.has_grandparent());
+        assert!(!2.has_grandparent());
         assert!(3.has_grandparent());
         assert!(4.has_grandparent());
         assert!(5.has_grandparent());

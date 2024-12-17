@@ -39,13 +39,32 @@
 //!   <https://doc.rust-lang.org/1.56.1/src/alloc/collections/binary_heap.rs.html>
 
 #![warn(missing_docs)]
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+#[cfg(not(feature = "std"))]
+use alloc::{vec, vec::Vec};
+#[cfg(not(feature = "std"))]
+use core::{
+    fmt,
+    iter::FromIterator,
+    mem,
+    ops::{Deref, DerefMut},
+    slice,
+};
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-use std::iter::FromIterator;
-use std::{fmt, mem, slice, vec};
-use std::ops::{Deref, DerefMut};
+#[cfg(feature = "std")]
+use std::{
+    fmt,
+    iter::FromIterator,
+    mem,
+    ops::{Deref, DerefMut},
+    slice, vec,
+};
 
 mod hole;
 mod index;
@@ -163,7 +182,13 @@ impl<T: Ord> MinMaxHeap<T> {
             0 => None,
             1 => Some(0),
             2 => Some(1),
-            _ => if slice[1] > slice[2] { Some(1) } else { Some(2) },
+            _ => {
+                if slice[1] > slice[2] {
+                    Some(1)
+                } else {
+                    Some(2)
+                }
+            }
         }
     }
 
@@ -566,19 +591,23 @@ pub struct Iter<'a, T: 'a>(slice::Iter<'a, T>);
 
 impl<'a, T> Iterator for Iter<'a, T> {
     type Item = &'a T;
-    fn next(&mut self) -> Option<Self::Item> { self.0.next() }
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
+    }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.0.size_hint()
     }
 }
 
-impl<'a, T> ExactSizeIterator for Iter<'a, T> { }
+impl<T> ExactSizeIterator for Iter<'_, T> {}
 
 impl<'a, T> IntoIterator for &'a MinMaxHeap<T> {
     type Item = &'a T;
     type IntoIter = Iter<'a, T>;
-    fn into_iter(self) -> Self::IntoIter { self.iter() }
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
 }
 
 /// An owning iterator over the elements of the min-max-heap in
@@ -587,16 +616,18 @@ pub struct IntoIter<T>(vec::IntoIter<T>);
 
 impl<T> Iterator for IntoIter<T> {
     type Item = T;
-    fn next(&mut self) -> Option<Self::Item> { self.0.next() }
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
+    }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.0.size_hint()
     }
 }
 
-impl<T> ExactSizeIterator for IntoIter<T> { }
+impl<T> ExactSizeIterator for IntoIter<T> {}
 
-impl<'a, T> IntoIterator for MinMaxHeap<T> {
+impl<T> IntoIterator for MinMaxHeap<T> {
     type Item = T;
     type IntoIter = IntoIter<T>;
     fn into_iter(self) -> Self::IntoIter {
@@ -611,20 +642,24 @@ impl<'a, T> IntoIterator for MinMaxHeap<T> {
 /// [`MinMaxHeap::drain`](struct.MinMaxHeap.html#method.drain).
 pub struct Drain<'a, T: 'a>(vec::Drain<'a, T>);
 
-impl<'a, T> Iterator for Drain<'a, T> {
+impl<T> Iterator for Drain<'_, T> {
     type Item = T;
-    fn next(&mut self) -> Option<Self::Item> { self.0.next() }
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
+    }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.0.size_hint()
     }
 }
 
-impl<'a, T> ExactSizeIterator for Drain<'a, T> { }
+impl<T> ExactSizeIterator for Drain<'_, T> {}
 
 impl<T: Ord> FromIterator<T> for MinMaxHeap<T> {
     fn from_iter<I>(iter: I) -> Self
-            where I: IntoIterator<Item = T> {
+    where
+        I: IntoIterator<Item = T>,
+    {
         MinMaxHeap::from(iter.into_iter().collect::<Vec<T>>())
     }
 }
@@ -653,19 +688,19 @@ pub struct DrainAsc<'a, T: 'a>(&'a mut MinMaxHeap<T>);
 #[derive(Debug)]
 pub struct DrainDesc<'a, T: 'a>(&'a mut MinMaxHeap<T>);
 
-impl<'a, T> Drop for DrainAsc<'a, T> {
+impl<T> Drop for DrainAsc<'_, T> {
     fn drop(&mut self) {
         let _ = (self.0).0.drain(..);
     }
 }
 
-impl<'a, T> Drop for DrainDesc<'a, T> {
+impl<T> Drop for DrainDesc<'_, T> {
     fn drop(&mut self) {
         let _ = (self.0).0.drain(..);
     }
 }
 
-impl<'a, T: Ord> Iterator for DrainAsc<'a, T> {
+impl<T: Ord> Iterator for DrainAsc<'_, T> {
     type Item = T;
 
     fn next(&mut self) -> Option<T> {
@@ -677,7 +712,7 @@ impl<'a, T: Ord> Iterator for DrainAsc<'a, T> {
     }
 }
 
-impl<'a, T: Ord> Iterator for DrainDesc<'a, T> {
+impl<T: Ord> Iterator for DrainDesc<'_, T> {
     type Item = T;
 
     fn next(&mut self) -> Option<T> {
@@ -689,25 +724,25 @@ impl<'a, T: Ord> Iterator for DrainDesc<'a, T> {
     }
 }
 
-impl<'a, T: Ord> DoubleEndedIterator for DrainAsc<'a, T> {
+impl<T: Ord> DoubleEndedIterator for DrainAsc<'_, T> {
     fn next_back(&mut self) -> Option<T> {
         self.0.pop_max()
     }
 }
 
-impl<'a, T: Ord> DoubleEndedIterator for DrainDesc<'a, T> {
+impl<T: Ord> DoubleEndedIterator for DrainDesc<'_, T> {
     fn next_back(&mut self) -> Option<T> {
         self.0.pop_min()
     }
 }
 
-impl<'a, T: Ord> ExactSizeIterator for DrainAsc<'a, T> {
+impl<T: Ord> ExactSizeIterator for DrainAsc<'_, T> {
     fn len(&self) -> usize {
         self.0.len()
     }
 }
 
-impl<'a, T: Ord> ExactSizeIterator for DrainDesc<'a, T> {
+impl<T: Ord> ExactSizeIterator for DrainDesc<'_, T> {
     fn len(&self) -> usize {
         self.0.len()
     }
@@ -760,13 +795,11 @@ pub struct PeekMinMut<'a, T: Ord> {
 
 impl<T: Ord + fmt::Debug> fmt::Debug for PeekMinMut<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_tuple("PeekMinMut")
-         .field(&**self)
-         .finish()
+        f.debug_tuple("PeekMinMut").field(&**self).finish()
     }
 }
 
-impl<'a, T: Ord> Drop for PeekMinMut<'a, T> {
+impl<T: Ord> Drop for PeekMinMut<'_, T> {
     fn drop(&mut self) {
         if self.sift {
             // SAFETY: `heap` is not empty
@@ -777,7 +810,7 @@ impl<'a, T: Ord> Drop for PeekMinMut<'a, T> {
     }
 }
 
-impl<'a, T: Ord> Deref for PeekMinMut<'a, T> {
+impl<T: Ord> Deref for PeekMinMut<'_, T> {
     type Target = T;
     fn deref(&self) -> &T {
         debug_assert!(!self.heap.is_empty());
@@ -786,7 +819,7 @@ impl<'a, T: Ord> Deref for PeekMinMut<'a, T> {
     }
 }
 
-impl<'a, T: Ord> DerefMut for PeekMinMut<'a, T> {
+impl<T: Ord> DerefMut for PeekMinMut<'_, T> {
     fn deref_mut(&mut self) -> &mut T {
         debug_assert!(!self.heap.is_empty());
         self.sift = true;
@@ -795,7 +828,7 @@ impl<'a, T: Ord> DerefMut for PeekMinMut<'a, T> {
     }
 }
 
-impl<'a, T: Ord> PeekMinMut<'a, T> {
+impl<T: Ord> PeekMinMut<'_, T> {
     /// Removes the peeked value from the heap and returns it.
     pub fn pop(mut self) -> T {
         // Sift is unnecessary since pop_min() already reorders heap
@@ -820,13 +853,11 @@ pub struct PeekMaxMut<'a, T: Ord> {
 
 impl<T: Ord + fmt::Debug> fmt::Debug for PeekMaxMut<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_tuple("PeekMaxMut")
-         .field(&**self)
-         .finish()
+        f.debug_tuple("PeekMaxMut").field(&**self).finish()
     }
 }
 
-impl<'a, T: Ord> Drop for PeekMaxMut<'a, T> {
+impl<T: Ord> Drop for PeekMaxMut<'_, T> {
     fn drop(&mut self) {
         if self.sift {
             // SAFETY: `max_index` is a valid index in `heap`
@@ -834,7 +865,7 @@ impl<'a, T: Ord> Drop for PeekMaxMut<'a, T> {
 
             if let Some(mut parent) = hole.get_parent() {
                 if parent.hole_element() < parent.other_element() {
-                   parent.swap_with();
+                    parent.swap_with();
                 }
             }
 
@@ -843,7 +874,7 @@ impl<'a, T: Ord> Drop for PeekMaxMut<'a, T> {
     }
 }
 
-impl<'a, T: Ord> Deref for PeekMaxMut<'a, T> {
+impl<T: Ord> Deref for PeekMaxMut<'_, T> {
     type Target = T;
     fn deref(&self) -> &T {
         debug_assert!(self.max_index < self.heap.len());
@@ -852,7 +883,7 @@ impl<'a, T: Ord> Deref for PeekMaxMut<'a, T> {
     }
 }
 
-impl<'a, T: Ord> DerefMut for PeekMaxMut<'a, T> {
+impl<T: Ord> DerefMut for PeekMaxMut<'_, T> {
     fn deref_mut(&mut self) -> &mut T {
         debug_assert!(self.max_index < self.heap.len());
         self.sift = true;
@@ -861,7 +892,7 @@ impl<'a, T: Ord> DerefMut for PeekMaxMut<'a, T> {
     }
 }
 
-impl<'a, T: Ord> PeekMaxMut<'a, T> {
+impl<T: Ord> PeekMaxMut<'_, T> {
     /// Removes the peeked value from the heap and returns it.
     pub fn pop(mut self) -> T {
         // Sift is unnecessary since pop_max() already reorders heap
@@ -874,8 +905,11 @@ impl<'a, T: Ord> PeekMaxMut<'a, T> {
 mod tests {
     extern crate rand;
 
-    use super::*;
     use self::rand::seq::SliceRandom;
+    use super::*;
+
+    #[cfg(not(feature = "std"))]
+    use alloc::format;
 
     #[test]
     fn example() {
@@ -905,30 +939,30 @@ mod tests {
     fn drain_asc() {
         let mut h = MinMaxHeap::from(vec![3, 2, 4, 1]);
         let mut i = h.drain_asc();
-        assert_eq!( i.next(), Some(1) );
-        assert_eq!( i.next(), Some(2) );
-        assert_eq!( i.next(), Some(3) );
-        assert_eq!( i.next(), Some(4) );
-        assert_eq!( i.next(), None );
+        assert_eq!(i.next(), Some(1));
+        assert_eq!(i.next(), Some(2));
+        assert_eq!(i.next(), Some(3));
+        assert_eq!(i.next(), Some(4));
+        assert_eq!(i.next(), None);
     }
 
     // This test catches a lot:
     #[test]
     fn random_vectors() {
-        for i in 0 .. 300 {
+        for i in 0..300 {
             check_heap(&random_heap(i));
         }
     }
 
     #[test]
     fn from_vector() {
-        for i in 0 .. 300 {
+        for i in 0..300 {
             check_heap(&MinMaxHeap::from(random_vec(i)))
         }
     }
 
     fn check_heap(heap: &MinMaxHeap<usize>) {
-        let asc  = iota_asc(heap.len());
+        let asc = iota_asc(heap.len());
         let desc = iota_desc(heap.len());
 
         assert_eq!(asc, into_vec_asc(heap.clone()));
@@ -938,7 +972,7 @@ mod tests {
     }
 
     fn random_vec(len: usize) -> Vec<usize> {
-        let mut result = (0 .. len).collect::<Vec<_>>();
+        let mut result = (0..len).collect::<Vec<_>>();
         result.shuffle(&mut rand::thread_rng());
         result
     }
@@ -964,11 +998,11 @@ mod tests {
     }
 
     fn iota_asc(len: usize) -> Vec<usize> {
-        (0 .. len).collect()
+        (0..len).collect()
     }
 
     fn iota_desc(len: usize) -> Vec<usize> {
-        let mut result = (0 .. len).collect::<Vec<_>>();
+        let mut result = (0..len).collect::<Vec<_>>();
         result.reverse();
         result
     }

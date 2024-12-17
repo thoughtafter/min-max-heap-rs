@@ -1,4 +1,4 @@
-use quickcheck::{Arbitrary, Gen, quickcheck};
+use quickcheck::{quickcheck, Arbitrary, Gen};
 
 mod fake_heap;
 
@@ -29,7 +29,7 @@ impl Arbitrary for Command {
         g.choose(COMMAND_FREQS).copied().unwrap_or(Command::Push)
     }
 
-    fn shrink(&self) -> Box<dyn Iterator<Item=Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         use Command::*;
 
         let v = match self {
@@ -45,24 +45,20 @@ impl Arbitrary for Command {
 const COMMAND_FREQS: &[Command] = {
     use Command::*;
     &[
-        Push, Push, Push,
-        PopMin,
-        PopMax,
-        PushPopMin,
-        PushPopMax,
-        ReplaceMin,
-        ReplaceMax,
+        Push, Push, Push, PopMin, PopMax, PushPopMin, PushPopMax, ReplaceMin, ReplaceMax,
     ]
 };
 
 impl<T: Arbitrary> Arbitrary for Script<T> {
     fn arbitrary(g: &mut Gen) -> Self {
-        Script((0 .. SCRIPT_LENGTH)
-            .map(|_| (Command::arbitrary(g), T::arbitrary(g)))
-            .collect())
+        Script(
+            (0..SCRIPT_LENGTH)
+                .map(|_| (Command::arbitrary(g), T::arbitrary(g)))
+                .collect(),
+        )
     }
 
-    fn shrink(&self) -> Box<dyn Iterator<Item=Self>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         Box::new(self.0.shrink().map(Script))
     }
 }
@@ -88,7 +84,8 @@ impl<T: Clone + Ord> Tester<T> {
     }
 
     fn check_script(&mut self, script: &Script<T>) -> bool {
-        script.0
+        script
+            .0
             .iter()
             .all(|&(cmd, ref elt)| self.do_checks(cmd, elt))
     }
@@ -105,17 +102,17 @@ impl<T: Clone + Ord> Tester<T> {
 
         let e1 = elt.clone();
         let e2 = elt.clone();
-        let r  = &mut self.real;
-        let f  = &mut self.fake;
+        let r = &mut self.real;
+        let f = &mut self.fake;
 
         match cmd {
-            Push       => {
+            Push => {
                 r.push(e1);
                 f.push(e2);
                 true
             }
-            PopMin     => r.pop_min() == f.pop_min(),
-            PopMax     => r.pop_max() == f.pop_max(),
+            PopMin => r.pop_min() == f.pop_min(),
+            PopMax => r.pop_max() == f.pop_max(),
             PushPopMin => r.push_pop_min(e1) == f.push_pop_min(e2),
             PushPopMax => r.push_pop_max(e1) == f.push_pop_max(e2),
             ReplaceMin => r.replace_min(e1) == f.replace_min(e2),

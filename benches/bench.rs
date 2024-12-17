@@ -37,4 +37,3 @@ fn pop_min_seq(b: &mut Bencher) {
         }
     });
 }
-
